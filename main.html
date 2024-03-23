@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html ng-app="coffeeApp">
+<head>
+  <title>Coffee Management System</title>
+  <!-- THE BELOW CDN IS ANGULAR-JS CDN  -->
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+  <style>
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #f2f2f2;
+    }
+
+    button {
+      margin-bottom: 5px;
+    }
+  </style>
+</head>
+<body ng-controller="coffeeController">
+  <h1>Coffee Management System</h1>
+
+  <!-- Coffee Menu -->
+  <h2>Coffee Menu</h2>
+  <table>
+    <tr>
+      <td ng-repeat="coffee in coffeeMenu">
+        <div>
+          {{ coffee.name }} - ${{ coffee.price }}
+        </div>
+        <button ng-click="addToCart(coffee)">Add to Cart</button>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Shopping Cart -->
+  <h2>Shopping Cart</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Coffee</th>
+        <th>Price</th>
+        <th>Quantity</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr ng-repeat="item in shoppingCart">
+        <td>{{ item.name }}</td>
+        <td>${{ item.price }}</td>
+        <td>{{ item.quantity }}</td>
+        <td>
+          <button ng-click="removeFromCart($index)">Remove</button> <!-- Button to remove item from cart -->
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <br>
+  <button ng-click="clearCart()">Clear Cart</button>
+  <br>
+  
+  <!-- Billing Section -->
+  <h2>Billing</h2>
+  <p>Total: ${{ calculateTotal() }}</p>
+  <button ng-click="generateBill()">Generate Bill</button>
+  <br>
+  <!-- Backup Data Button -->
+  <button ng-click="backupData()">Backup Data</button>
+
+  <script>
+    var app = angular.module('coffeeApp', []);
+
+    app.controller('coffeeController', function ($scope, $timeout) {
+      $scope.coffeeMenu = [
+        { name: 'Espresso', price: 130.5 },
+        { name: 'Latte', price: 103.5 },
+        { name: 'Cappuccino', price: 130.0 },
+        { name: 'Mocha', price: 100.0 }
+      ];
+
+      $scope.shoppingCart = [];
+
+      // Function to add coffee to cart , using find() to search for the item 
+      $scope.addToCart = function (coffee) {
+        var existingItem = $scope.shoppingCart.find(item => item.name === coffee.name);
+
+        if (existingItem) {
+          existingItem.quantity++;
+        } else {
+          coffee.quantity = 1;
+          $scope.shoppingCart.push(angular.copy(coffee));
+          // console.log(shoppingCart)
+        }
+      };
+
+      // Function to remove coffee from cart
+      $scope.removeFromCart = function (index) {
+        var item = $scope.shoppingCart[index];
+        
+        if (item.quantity > 1) {
+          item.quantity--;
+        } else {
+          $scope.shoppingCart.splice(index, 1);
+        }
+      };
+
+      // Function to clear the cart
+      $scope.clearCart = function () {
+        var confirmClear = confirm('Are you sure you want to clear the cart?');
+
+        if (confirmClear) {
+          $scope.shoppingCart = [];
+        }
+      };
+
+      // Function to calculate total amount, 
+      // Using reduce API to calculate total
+      $scope.calculateTotal = function () {
+        return $scope.shoppingCart.reduce((total, item) => total + item.price * item.quantity, 0).toFixed(2); 
+      };
+
+      // Function to generate bill
+      $scope.generateBill = function () {
+        var confirmGenerate = confirm('Are you sure you want to generate the bill?');
+
+        if (!confirmGenerate) {
+          alert('Bill generation canceled.');
+          $scope.shoppingCart = [];
+          return;
+        }
+
+        var bill = {
+          items: angular.copy($scope.shoppingCart),
+          totalAmount: $scope.calculateTotal(),
+          generatedAt: new Date(),
+          feedback: ''
+        };
+
+        if (bill.totalAmount > 500) {
+          bill.totalAmount -= 100;
+          alert("HOORAY ! YOU GET A DISCOUNT ! $100 DISCOUNT APPLIED.");
+        }
+
+        bill.feedback = prompt('PLEASE PROVIDE FEEDBACK (optional):');
+
+        alert('BILL GENERATED !\nTotal Amount: $' + bill.totalAmount);
+
+        if (bill.feedback) {
+          alert(' THANK YOU FOR FEEDBACK , IT IS CONSIDERED FOR FURTHER IMPROVEMENTS' );
+        }
+
+        // Check if bill data already exists in localStorage , 
+        // Using some API to check for duplicacy
+        var storedBills = JSON.parse(localStorage.getItem('generatedBills')) || [];
+        var isDuplicate = storedBills.some(function(existingBill) {
+          return angular.equals(existingBill.items, bill.items); 
+          });
+          
+        // console.log(isDuplicate)
+
+        if (!isDuplicate) {
+          storedBills.push(bill);
+          localStorage.setItem('generatedBills', JSON.stringify(storedBills));
+          alert('Bill data stored in localStorage.');
+        } else {
+          alert('Bill data already exists in localStorage.');
+        }
+      };
+
+      // Backup Data Function
+      $scope.backupData = function () {
+        var storedBills = JSON.parse(localStorage.getItem('generatedBills')) || [];
+        // console.log(storedBills)
+        
+        // Check for duplicacy
+        var isDuplicate = storedBills.some(function(existingBill) {
+          return angular.equals(existingBill.items, $scope.shoppingCart);
+        });
+        // console.log(isDuplicate)
+        
+
+        if (isDuplicate) {
+          alert('The current bill data is already stored in localStorage.');
+        } else {
+          storedBills.push({
+            items: angular.copy($scope.shoppingCart),
+            // console.log(items)
+            generatedAt: new Date()
+          });
+          localStorage.setItem('generatedBills', JSON.stringify(storedBills));
+          alert('Data backed up successfully.');
+        }
+      };
+    });
+  </script>
+</body>
+</html>
